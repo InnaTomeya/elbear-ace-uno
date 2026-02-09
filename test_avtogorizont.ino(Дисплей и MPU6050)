@@ -1,0 +1,118 @@
+#include "TFT.h"
+#include "SPI.h"
+#include "I2Cdev.h"
+#include "MPU6050.h"
+
+#define cs 10 // пин для подключения CS
+#define dc 8 // пин для подключения A0
+#define rst 9 // пин для подключения reset
+#define OUTPUT_READABLE_ACCELGYRO
+TFT screen = TFT(cs, dc, rst);
+MPU6050 mpu;
+
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
+bool blinkState;
+
+void setup() {
+  screen.begin();
+
+  // цвет экрана 
+  screen.background(0, 0, 0); 
+  // размер шрифта
+  screen.setTextSize(1);
+  // цвет текста 
+  screen.stroke(255, 255, 255);
+
+
+
+
+ #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    Wire.begin(); 
+  #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    Fastwire::setup(400, true);
+  #endif
+
+  Serial.begin(38400); //Initializate Serial wo work well at 8MHz/16MHz
+
+  /*Initialize device and check connection*/ 
+  screen.println("     Initializing MPU...");
+  mpu.initialize();
+  screen.println("     Testing MPU6050 connection...");
+  if(mpu.testConnection() ==  false){
+    screen.println("    MPU6050 connection failed");
+    while(true);
+  }
+  else{
+    screen.println("     MPU6050 connection successful");
+  }
+
+  /* Use the code below to change accel/gyro offset values. Use MPU6050_Zero to obtain the recommended offsets */ 
+  screen.println("     Updating internal sensor offsets...\n");
+  mpu.setXAccelOffset(0); //Set your accelerometer offset for axis X
+  mpu.setYAccelOffset(0); //Set your accelerometer offset for axis Y
+  mpu.setZAccelOffset(0); //Set your accelerometer offset for axis Z
+  mpu.setXGyroOffset(0);  //Set your gyro offset for axis X
+  mpu.setYGyroOffset(0);  //Set your gyro offset for axis Y
+  mpu.setZGyroOffset(0);  //Set your gyro offset for axis Z
+  /*Print the defined offsets*/
+ screen.print("\t\r");
+ screen.print(mpu.getXAccelOffset());
+  screen.print("\t\r");
+  screen.print(mpu.getYAccelOffset()); 
+  screen.print("\t\r");
+  screen.print(mpu.getZAccelOffset());
+  Serial.print("\t\r");
+  Serial.print(mpu.getXGyroOffset()); 
+  Serial.print("\t");
+  Serial.print(mpu.getYGyroOffset());
+  Serial.print("\t");
+  Serial.print(mpu.getZGyroOffset());
+  Serial.print("\n");
+  screen.print("\n");
+
+  /*Configure board LED pin for output*/ 
+  pinMode(LED_BUILTIN, OUTPUT);
+
+}
+
+void loop() {
+  // очистка экрана дисплея
+ // screen.background(0, 0, 0);
+  // размер шрифта
+  screen.setTextSize(1);
+  mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+
+
+#ifdef OUTPUT_READABLE_ACCELGYRO
+    Serial.print(" a/g:\t");
+    screen.print(" a/g:\t");
+    screen.print(ax); screen.print("\t\r");
+    screen.print(ay); screen.print("\t\r");
+    screen.print(az); screen.print("\t\r");
+    Serial.print(gx); Serial.print("\t");
+    Serial.print(gy); Serial.print("\t");
+    Serial.println(gz);
+  #endif
+
+  #ifdef OUTPUT_BINARY_ACCELGYRO
+    screen.write((uint8_t)(ax >> 8)); screen.write((uint8_t)(ax & 0xFF));
+    screen.write((uint8_t)(ay >> 8)); screen.write((uint8_t)(ay & 0xFF));
+    screen.write((uint8_t)(az >> 8)); screen.write((uint8_t)(az & 0xFF));
+    Serial.write((uint8_t)(gx >> 8)); Serial.write((uint8_t)(gx & 0xFF));
+    Serial.write((uint8_t)(gy >> 8)); Serial.write((uint8_t)(gy & 0xFF));
+    Serial.write((uint8_t)(gz >> 8)); Serial.write((uint8_t)(gz & 0xFF));
+  #endif
+
+  /*Blink LED to indicate activity*/
+  blinkState = !blinkState;
+  digitalWrite(LED_BUILTIN, blinkState);
+
+
+  // очистка экрана дисплея
+//  screen.background(0, 0, 0);
+  // размер шрифта
+  screen.setTextSize(1);
+ 
+
+}
